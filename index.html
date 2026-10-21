@@ -1,6 +1,9 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Eternia naslovna</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,500;0,7..72,700;1,7..72,400&family=Figtree:wght@400;500;600;700&display=swap">
@@ -239,6 +242,21 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
 .menu button { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 13px 2px; font: 600 15.5px var(--body); color: var(--ink); cursor: pointer; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 30; background: var(--ok); color: #fff; padding: 11px 16px; border-radius: 12px; font-size: 13.5px; font-weight: 600; width: min(408px, calc(100% - 32px)); text-align: center; box-shadow: 0 6px 24px rgba(0,0,0,.2); overflow-wrap: anywhere; }
 .toast.bad { background: var(--err); }
+/* birač datuma: dan / mjesec / godina se mijenjaju kotačićem miša ili povlačenjem prstom */
+.dp { display: grid; gap: 7px; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid #CFCFCA; border-radius: 9px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: transparent; padding: 6px 4px; font: 600 12px var(--body); color: var(--muted); cursor: pointer; }
+.seg button + button { border-left: 1px solid #CFCFCA; }
+.seg button[aria-pressed="true"] { background: var(--th); color: #fff; }
+.wheels { display: flex; justify-content: center; gap: 10px; }
+.whw { display: grid; justify-items: center; gap: 3px; }
+.wh { width: 62px; display: grid; grid-template-rows: 22px 32px 22px; text-align: center; border: 1px solid #CFCFCA; border-radius: 11px; background: var(--field); touch-action: none; user-select: none; -webkit-user-select: none; cursor: ns-resize; overflow: hidden; }
+.wh.y { width: 78px; }
+.wh span { display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+.wh .pv, .wh .nx { font-size: 12.5px; color: #B2B2AC; cursor: pointer; }
+.wh .cv { font: 700 17px var(--body); color: var(--ink); border-block: 1px solid var(--line); background: color-mix(in srgb, var(--th) 6%, white); }
+.whl { font-size: 10.5px; color: var(--muted); }
+.dplab { font-size: 12px; font-weight: 600; color: var(--muted); }
 /* odabir slike, galerija, fotoaparat */
 .opt { display: flex; align-items: center; gap: 14px; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 13px 2px; font: 600 15.5px var(--body); color: var(--ink); cursor: pointer; text-align: left; }
 .opt svg { width: 26px; height: 26px; flex: none; color: var(--muted); }
@@ -272,7 +290,13 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
 @media (prefers-reduced-motion: reduce) { .vf img, .cam-top .rec i { animation: none; } }
 :focus-visible { outline: 2.5px solid #8C8C86; outline-offset: 2px; }
 </style>
-
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
 <div class="app" id="app">
   <header class="bar">
     <button class="brand" id="brand" aria-label="eternia naslovna"></button>
@@ -425,7 +449,26 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
     link: `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="4" y="7" width="10" height="12" rx="2"/><rect x="10" y="4" width="10" height="12" rx="2" fill="#9A9A9A"/></svg>`,
   };
 
-  const fresh = () => ({ sq: { ime: "", prez: "", rod: "", smrt: "", done: false }, logged: false, user: "Ivana", country: "HR", more: false, design: null, view: "home",
+  /* ---------- birač datuma ---------- */
+  const YNOW = new Date().getFullYear();
+  function dpDefault(mode, yearsBack) { return { mode, d: 15, m: 6, y: YNOW - yearsBack }; }
+  function fmtP(P) { return P.mode === "full" ? `${P.d}. ${P.m}. ${P.y}.` : P.mode === "year" ? `${P.y}.` : ""; }
+  const dim = (m, y) => new Date(y, m, 0).getDate();
+  const RNG = { d: P => [1, dim(P.m, P.y)], m: () => [1, 12], y: () => [1850, YNOW] };
+  function dpVal(P, part, off) {
+    const [lo, hi] = RNG[part](P); const v = P[part] + off;
+    if (part === "y") return v < lo || v > hi ? "" : v;
+    const n = hi - lo + 1; return ((v - lo) % n + n) % n + lo;
+  }
+  const dpLab = v => v === "" ? "" : v + ".";
+  const DP_MODES = { born: [["full", "Datum"], ["year", "Godina"], ["none", "Nepoznato"]], died: [["full", "Datum"], ["year", "Godina"], ["none", "Nepoznato"]],
+                     rod: [["full", "Datum"], ["year", "Godina"], ["none", "Bilo koji"]], smrt: [["full", "Datum"], ["year", "Godina"], ["none", "Bilo koji"]] };
+  const dpWheel = (id, P, part) => `<div class="whw"><div class="wh ${part}" data-dpid="${id}" data-part="${part}" tabindex="0" role="spinbutton" aria-label="${{ d: "Dan", m: "Mjesec", y: "Godina" }[part]}" aria-valuenow="${P[part]}"><span class="pv">${dpLab(dpVal(P, part, -1))}</span><span class="cv">${dpLab(P[part])}</span><span class="nx">${dpLab(dpVal(P, part, 1))}</span></div><span class="whl">${{ d: "dan", m: "mjesec", y: "godina" }[part]}</span></div>`;
+  function dpHTML(id, P) {
+    return `<div class="dp" data-dp="${id}"><div class="seg">${DP_MODES[id].map(([k, l]) => `<button type="button" data-dpmode="${k}" aria-pressed="${P.mode === k}">${l}</button>`).join("")}</div>` +
+      (P.mode === "none" ? "" : `<div class="wheels">${P.mode === "full" ? dpWheel(id, P, "d") + dpWheel(id, P, "m") : ""}${dpWheel(id, P, "y")}</div>`) + `</div>`;
+  }
+  const fresh = () => ({ sq: { ime: "", prez: "", rod: "", smrt: "", done: false }, sqP: { rod: dpDefault("none", 65), smrt: dpDefault("none", 5) }, logged: false, user: "Ivana", country: "HR", more: false, design: null, view: "home",
     people: [], gsName: "", editIdx: null, draft: null, banner: "", fav: false, memIdx: 0, msIdx: 0 });
   const S = fresh();
   /* S.g = trenutno otvorena grobna stranica (vlastita ili demo); S.design/people/gsName čitaju se iz nje */
@@ -445,7 +488,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
   const yearOf = s => { const m = String(s || "").match(/(\d{4})\.?\s*$/); return m ? +m[1] : null; };
   const DATE_RE = /^\s*(\d{1,2}\.\s*\d{1,2}\.\s*)?\d{4}\.?\s*$/;
   const DM_RE = /^\s*\d{1,2}\.\s*\d{1,2}\.?\s*$/;
-  const blankPerson = () => ({ name: "", born: "", died: "", text: "", photo: null, filter: "std", special: [], zap: 0, gori: 0, cvi: 0, mems: [] });
+  const blankPerson = () => ({ name: "", bornP: dpDefault("full", 65), diedP: dpDefault("full", 5), born: fmtP(dpDefault("full", 65)), died: fmtP(dpDefault("full", 5)), text: "", photo: null, filter: "std", special: [], zap: 0, gori: 0, cvi: 0, mems: [] });
 
   let tt;
   function toast(msg, bad) { const el = $("toast"); el.textContent = msg; el.classList.toggle("bad", !!bad); el.hidden = false; clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 3000); }
@@ -507,16 +550,16 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
     return `
     <button class="back" data-act="home">‹ Natrag</button>
     <h1 class="h">Pronađi memorijalnu/grobnu stranicu</h1>
-    <p class="note">Ispunite barem jedno polje. Datum možete upisati cijeli ili samo godinu.</p>
+    <p class="note">Ispunite barem jedno polje. Za datume odaberite Datum ili Godina pa vrijednost namjestite kotačićem ili povlačenjem.</p>
     <form id="sForm" novalidate style="display:grid;gap:10px">
       <div class="row2">
         <label class="fld" for="sIme">Ime<input id="sIme" value="${esc(q.ime)}" placeholder="npr. Ivan" autocomplete="off"></label>
         <label class="fld" for="sPrez">Prezime<input id="sPrez" value="${esc(q.prez)}" placeholder="npr. Horvat" autocomplete="off"></label>
       </div>
-      <div class="row2">
-        <label class="fld" for="sRod">Rođenje<input id="sRod" value="${esc(q.rod)}" placeholder="dd.mm.gggg ili gggg"></label>
-        <label class="fld" for="sSmrt">Smrt<input id="sSmrt" value="${esc(q.smrt)}" placeholder="dd.mm.gggg ili gggg"></label>
-      </div>
+      <span class="dplab">Rođenje</span>
+      ${dpHTML("rod", S.sqP.rod)}
+      <span class="dplab">Smrt</span>
+      ${dpHTML("smrt", S.sqP.smrt)}
       <button class="cta" type="submit">Traži</button>
     </form>
     ${q.done ? searchResults() : ""}`;
@@ -574,11 +617,11 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
     <button class="photo" data-act="pick" aria-label="Dodaj sliku">${p.photo ? `<img class="${filt(p.filter)}" src="${p.photo}" alt="Odabrana slika">` : `<span class="plus"><b>+</b>Slika</span>`}</button>
     <div class="chips">${[["std", "Standard"], ["bw", "Crno-bijelo"], ["old", "Stara fotografija"]].map(([k, l]) => `<button class="chip" data-filter="${k}" aria-pressed="${p.filter === k}">${l}</button>`).join("")}</div>
     <label class="fld" for="fName">a) Ime i prezime *<input id="fName" value="${esc(p.name)}" placeholder="npr. Ivan Horvat"></label>
-    <div class="row2">
-      <label class="fld" for="fBorn">b) Datum/Godina rođenja<input id="fBorn" value="${esc(p.born)}" placeholder="dd.mm.gggg ili gggg"></label>
-      <label class="fld" for="fDied">c) Datum/Godina smrti<input id="fDied" value="${esc(p.died)}" placeholder="dd.mm.gggg ili gggg"></label>
-    </div>
-    <p class="hint">Upišite datum, samo godinu ili ostavite prazno. Puni datum omogućuje podsjetnik na godišnjicu.</p>
+    <span class="dplab">b) Rođenje</span>
+    ${dpHTML("born", p.bornP)}
+    <span class="dplab">c) Smrt</span>
+    ${dpHTML("died", p.diedP)}
+    <p class="hint">Vrijednosti mijenjajte kotačićem miša ili povlačenjem prstom gore-dolje. Ako ne znate točan datum, odaberite Godina ili Nepoznato. Puni datum omogućuje podsjetnik na godišnjicu.</p>
     <label class="fld" for="fText">d) Rečenica koja opisuje osobu<textarea id="fText" rows="2" maxlength="150" placeholder="npr. Dobar otac i djed, uvijek s osmijehom.">${esc(p.text)}</textarea></label>
     <div class="sect">e) Dodaj poseban datum</div>
     <p class="hint">Datum bez godine, podsjetnik se ponavlja svake godine.</p>
@@ -724,9 +767,8 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
     if (S.view === "search") {
       $("sForm").addEventListener("submit", e => {
         e.preventDefault();
-        const v = { ime: $("sIme").value, prez: $("sPrez").value, rod: $("sRod").value.trim(), smrt: $("sSmrt").value.trim() };
+        const v = { ime: $("sIme").value, prez: $("sPrez").value, rod: fmtP(S.sqP.rod), smrt: fmtP(S.sqP.smrt) };
         if (!v.ime.trim() && !v.prez.trim() && !v.rod && !v.smrt) { $("sPrez").focus(); return toast("Upišite barem ime, prezime ili godinu", true); }
-        for (const [k, id] of [["rod", "sRod"], ["smrt", "sSmrt"]]) if (v[k] && !DATE_RE.test(v[k])) { $(id).focus(); return toast("Datum upišite kao dd.mm.gggg ili samo godinu gggg", true); }
         S.sq = { ...v, done: true }; render();
       });
       document.querySelectorAll("[data-hit]").forEach(b => b.addEventListener("click", () => {
@@ -758,6 +800,55 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
     });
   }
 
+  /* ---------- birač datuma: događaji ---------- */
+  const dpModel = id => (id === "born" || id === "died") ? S.draft[id + "P"] : S.sqP[id];
+  function dpSync(id) { if ((id === "born" || id === "died") && S.draft) S.draft[id] = fmtP(dpModel(id)); }
+  function dpPaint(id) {
+    const P = dpModel(id);
+    document.querySelectorAll(`.wh[data-dpid="${id}"]`).forEach(w => {
+      const part = w.dataset.part;
+      w.querySelector(".pv").textContent = dpLab(dpVal(P, part, -1));
+      w.querySelector(".cv").textContent = dpLab(P[part]);
+      w.querySelector(".nx").textContent = dpLab(dpVal(P, part, 1));
+      w.setAttribute("aria-valuenow", P[part]);
+    });
+  }
+  function dpStep(w, dir) {
+    const id = w.dataset.dpid, part = w.dataset.part, P = dpModel(id);
+    const v = dpVal(P, part, dir); if (v === "") return;
+    P[part] = v; P.d = Math.min(P.d, dim(P.m, P.y));
+    dpSync(id); dpPaint(id);
+  }
+  document.addEventListener("wheel", e => {
+    const w = e.target.closest && e.target.closest(".wh"); if (!w) return;
+    e.preventDefault();
+    w._acc = (w._acc || 0) + e.deltaY;
+    if (Math.abs(w._acc) >= 40) { dpStep(w, Math.sign(w._acc)); w._acc = 0; }
+  }, { passive: false });
+  let drag = null;
+  document.addEventListener("pointerdown", e => {
+    const w = e.target.closest && e.target.closest(".wh"); if (!w) return;
+    drag = { w, y0: e.clientY, moved: false, tgt: e.target };
+    try { w.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  document.addEventListener("pointermove", e => {
+    if (!drag) return;
+    let dy = drag.y0 - e.clientY;
+    while (dy >= 22) { dpStep(drag.w, 1); drag.y0 -= 22; dy -= 22; drag.moved = true; }
+    while (dy <= -22) { dpStep(drag.w, -1); drag.y0 += 22; dy += 22; drag.moved = true; }
+  });
+  document.addEventListener("pointerup", () => {
+    if (!drag) return;
+    if (!drag.moved) { if (drag.tgt.classList.contains("pv")) dpStep(drag.w, -1); else if (drag.tgt.classList.contains("nx")) dpStep(drag.w, 1); }
+    drag = null;
+  });
+  document.addEventListener("pointercancel", () => { drag = null; });
+  document.addEventListener("keydown", e => {
+    const w = e.target.closest && e.target.closest(".wh"); if (!w) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); dpStep(w, 1); }
+    if (e.key === "ArrowUp") { e.preventDefault(); dpStep(w, -1); }
+  });
+
   let pendingCreate = false;
   function startCreate() {
     if (!S.logged) { setMode("login", "Za kreiranje stranice potreban je račun. Nakon prijave nastavljate s odabirom dizajna."); pendingCreate = true; open("authScrim"); return; }
@@ -768,7 +859,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
 
   function readDraft() {
     const p = S.draft; if (!p || S.view !== "person") return;
-    p.name = $("fName").value; p.born = $("fBorn").value.trim(); p.died = $("fDied").value.trim(); p.text = $("fText").value;
+    p.name = $("fName").value; p.born = fmtP(p.bornP); p.died = fmtP(p.diedP); p.text = $("fText").value;
     p.special.forEach((s, i) => { s.n = $("sN" + i).value; s.d = $("sD" + i).value; });
   }
   function perr(msg, id) { const e = $("perr"); e.textContent = msg; e.hidden = false; if (id) $(id).focus(); }
@@ -778,10 +869,11 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
     const p = S.draft;
     $("perr").hidden = true;
     if (!p.name.trim()) return perr("Upišite ime i prezime.", "fName");
-    if (p.born && !DATE_RE.test(p.born)) return perr("Datum rođenja upišite kao dd.mm.gggg (npr. 12.03.1938) ili samo godinu gggg.", "fBorn");
-    if (p.died && !DATE_RE.test(p.died)) return perr("Datum smrti upišite kao dd.mm.gggg (npr. 05.11.2019) ili samo godinu gggg.", "fDied");
-    const yb = yearOf(p.born), yd = yearOf(p.died);
-    if (yb && yd && yd < yb) return perr("Godina smrti ne može biti prije godine rođenja.", "fDied");
+    const B = p.bornP, Dd = p.diedP;
+    if (B.mode !== "none" && Dd.mode !== "none") {
+      const before = Dd.y < B.y || (B.mode === "full" && Dd.mode === "full" && Dd.y === B.y && (Dd.m < B.m || (Dd.m === B.m && Dd.d < B.d)));
+      if (before) return perr("Datum smrti ne može biti prije datuma rođenja.");
+    }
     for (let i = 0; i < p.special.length; i++) {
       const s = p.special[i];
       if (!s.n.trim() && !s.d.trim()) continue;
@@ -842,6 +934,13 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
         case "fav": S.fav = !S.fav; render(); return toast(S.fav ? "Pratite ovu stranicu – stizat će vam podsjetnici" : "Više ne pratite ovu stranicu");
         case "write": $("memFor").textContent = "Za: " + S.people[S.msIdx].name + " · objavljuje se pod imenom " + S.user; $("memTxt").value = ""; $("memCnt").textContent = "0 / 300"; return open("memScrim");
       }
+    }
+    if (t.dataset.dpmode) {
+      if (S.view === "person") readDraft();
+      const box = t.closest(".dp"), id = box.dataset.dp;
+      dpModel(id).mode = t.dataset.dpmode; dpSync(id);
+      box.outerHTML = dpHTML(id, dpModel(id));
+      return;
     }
     if (t.dataset.design) { S.design = t.dataset.design; return render(); }
     if (t.dataset.filter) { readDraft(); S.draft.filter = t.dataset.filter; return render(); }
@@ -1035,5 +1134,5 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
   render();
 })();
 </script>
-
-</body></html>
+</body>
+</html>
