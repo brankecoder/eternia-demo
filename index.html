@@ -242,6 +242,10 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
 .menu button { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 13px 2px; font: 600 15.5px var(--body); color: var(--ink); cursor: pointer; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 30; background: var(--ok); color: #fff; padding: 11px 16px; border-radius: 12px; font-size: 13.5px; font-weight: 600; width: min(408px, calc(100% - 32px)); text-align: center; box-shadow: 0 6px 24px rgba(0,0,0,.2); overflow-wrap: anywhere; }
 .toast.bad { background: var(--err); }
+.btnrow { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.danger { appearance: none; cursor: pointer; border-radius: 999px; padding: 10px 14px; background: var(--surface); color: var(--err); border: 1.3px solid var(--err); font: 600 14.5px/1.2 var(--body); }
+.danger.fill { background: var(--err); color: #fff; }
+.danger:hover { filter: brightness(.97); }
 /* birač datuma: dan / mjesec / godina se mijenjaju kotačićem miša ili povlačenjem prstom */
 .dp { display: grid; gap: 7px; }
 .seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid #CFCFCA; border-radius: 9px; overflow: hidden; background: var(--surface); }
@@ -334,6 +338,15 @@ img { max-width: 100%; }
   <div class="sheet" role="dialog" aria-modal="true" aria-label="Izbornik">
     <div class="grip"></div>
     <ul class="menu" id="menuList"></ul>
+  </div>
+</div>
+
+<div class="scrim" id="delScrim" hidden>
+  <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="delTitle">
+    <div class="grip"></div>
+    <h3 id="delTitle">Obrisati?</h3>
+    <p id="delText"></p>
+    <div class="btnrow" style="grid-template-columns:1fr 1fr"><button class="cancel" data-close="delScrim">Odustani</button><button class="danger fill" id="delYes">Obriši</button></div>
   </div>
 </div>
 
@@ -633,7 +646,7 @@ img { max-width: 100%; }
       </div>`).join("")}
     <button class="addlink" data-act="addSpecial">+ Dodaj ${p.special.length ? "još jedan " : ""}datum (imendan, slava, godišnjica braka…)</button>
     <p class="err" id="perr" hidden></p>
-    <button class="cta th" data-act="savePerson">Spremi</button>`;
+    ${editing ? `<div class="btnrow"><button class="danger" data-act="askDelMS">Obriši</button><button class="cta th" data-act="savePerson">Spremi</button></div>` : `<button class="cta th" data-act="savePerson">Spremi</button>`}`;
   };
 
   V.gsedit = () => `
@@ -646,7 +659,7 @@ img { max-width: 100%; }
       <button class="prow" data-editp="${i}" aria-label="Uredi ${esc(p.name)}">${avatar(p, 38)}<span class="m"><b>${esc(p.name)}</b><small>${esc(dateLine(p, true))}</small></span><span class="editb">${IC.edit.replace("<svg", '<svg width="18" height="18"')}</span></button>`).join("")}
     <button class="dashed" data-act="addPerson">+ Dodaj osobu</button>
     <div style="height:6px"></div>
-    <button class="cta th" data-act="toShare">Gotovo – podijeli grobnu stranicu</button>`;
+    <div class="btnrow"><button class="danger" data-act="askDelGS">Obriši</button><button class="cta th" data-act="toShare">Završi s izradom</button></div>`;
 
   const APPS = [["WhatsApp", "#3E9A5E", "bubble"], ["Messenger", "#3B6FD9", "bubble"], ["Viber", "#7254A8", "bubble"], ["Telegram", "#3A8CC4", "bubble"], ["SMS", "#5E6670", "bubble"], ["E-mail", "#8A6D3B", "mail"], ["Signal", "#3A6FB0", "bubble"], ["Kopiraj link", "#9A9A9A", "link"]];
   V.share = () => `
@@ -849,6 +862,18 @@ img { max-width: 100%; }
     if (e.key === "ArrowUp") { e.preventDefault(); dpStep(w, -1); }
   });
 
+  let delWhat = null;
+  $("delYes").addEventListener("click", () => {
+    close("delScrim");
+    if (delWhat === "ms" && S.editIdx !== null) {
+      const name = S.people[S.editIdx].name;
+      S.people.splice(S.editIdx, 1); S.editIdx = null; S.draft = null;
+      if (S.people.length) { S.banner = name + " je obrisan/a s groba"; return go("gsedit"); }
+      S.g = MINE = newMine(); go("home"); return toast("Obrisana je memorijalna stranica i grobna stranica, jer na njoj više nema osoba");
+    }
+    if (delWhat === "gs") { const n = S.gsName; S.g = MINE = newMine(); go("home"); toast(n + " je obrisana"); }
+  });
+
   let pendingCreate = false;
   function startCreate() {
     if (!S.logged) { setMode("login", "Za kreiranje stranice potreban je račun. Nakon prijave nastavljate s odabirom dizajna."); pendingCreate = true; open("authScrim"); return; }
@@ -924,6 +949,17 @@ img { max-width: 100%; }
         case "pick": readDraft(); return open("picScrim");
         case "addSpecial": S.draft.special.push({ n: "", d: "" }); render(); return $("sN" + (S.draft.special.length - 1)).focus();
         case "savePerson": return savePerson();
+        case "askDelMS": {
+          const p = S.people[S.editIdx];
+          $("delTitle").textContent = "Obrisati memorijalnu stranicu?";
+          $("delText").textContent = `Briše se stranica za ${p.name} sa svim sjećanjima, svijećama i cvijećem.` + (S.people.length === 1 ? " To je jedina osoba na grobu, pa se briše i grobna stranica." : "") + " Ovo se ne može poništiti.";
+          delWhat = "ms"; return open("delScrim");
+        }
+        case "askDelGS": {
+          $("delTitle").textContent = "Obrisati grobnu stranicu?";
+          $("delText").textContent = `Briše se ${S.gsName} i sve memorijalne stranice na njoj (${osobe(S.people.length)}), sa svim sjećanjima, svijećama i cvijećem. Ovo se ne može poništiti.`;
+          delWhat = "gs"; return open("delScrim");
+        }
         case "gsedit": S.banner = ""; return go("gsedit");
         case "addPerson": S.editIdx = null; S.draft = blankPerson(); S.banner = ""; return go("person");
         case "toShare": { const n = $("gsName").value.trim(); if (n) S.gsName = n; return go("share"); }
@@ -1128,8 +1164,8 @@ img { max-width: 100%; }
   });
   document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => close(b.dataset.close)));
 
-  for (const id of ["authScrim", "menuScrim", "memScrim", "picScrim", "galScrim"]) $(id).addEventListener("click", e => { if (e.target.id === id) close(id); });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") { ["authScrim", "menuScrim", "memScrim", "picScrim", "galScrim"].forEach(close); $("cam").hidden = true; } });
+  for (const id of ["authScrim", "menuScrim", "memScrim", "picScrim", "galScrim", "delScrim"]) $(id).addEventListener("click", e => { if (e.target.id === id) close(id); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { ["authScrim", "menuScrim", "memScrim", "picScrim", "galScrim", "delScrim"].forEach(close); $("cam").hidden = true; } });
 
   render();
 })();
